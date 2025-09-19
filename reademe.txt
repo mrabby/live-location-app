@@ -1,3 +1,1 @@
-https://github.com/pwscoding/realtime-location-tracking
-
-https://www.youtube.com/watch?v=-3oF5HYB3honode
+live-location-app
