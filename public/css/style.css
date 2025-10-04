@@ -20,3 +20,11 @@ body {
     transform: rotate(0deg);
     /* Default rotation, adjust if needed */
 }
+
+#locationForm {
+    margin-bottom: 1em;
+    background: #f8f8f8;
+    padding: 1em;
+    border-radius: 8px;
+    width: 320px;
+}

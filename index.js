@@ -10,12 +10,18 @@ const io = socketio(server)
 
 io.on("connection", function (socket) {
     socket.on("send-location", function (data) {
-        io.emit("receive-location", { id: socket.id, ...data })
-    })
+        // Èe je poslano polje points, ga posreduj naprej
+        if (Array.isArray(data.points)) {
+            io.emit("receive-location", { id: socket.id, points: data.points });
+        } else {
+            // Za nazaj združljivost (ena toèka)
+            io.emit("receive-location", { id: socket.id, ...data });
+        }
+    });
 
     socket.on("disconnect", function () {
-        io.emit("user-disconnect", { id: socket.id })
-    })
+        io.emit("user-disconnect", { id: socket.id });
+    });
 })
 
 app.set('view engine', 'ejs')
@@ -28,4 +34,6 @@ app.get("/", (req, res) => {
     res.render("index")
 })
 
-server.listen(3000)
+server.listen(3000, () => {
+    console.log('Server is running on http://localhost:3000')
+})
