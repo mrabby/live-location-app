@@ -28,3 +28,55 @@ body {
     border-radius: 8px;
     width: 320px;
 }
+
+.leaflet-top.leaflet-right {
+    right: 20px;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* razmak med gumbi */
+}
+
+.leaflet-top.leaflet-left {
+    left: 20px;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* razmak med gumbi */
+}
+
+.leaflet-control-custom,
+.leaflet-bar .leaflet-control {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.leaflet-control-custom:focus,
+.leaflet-control-custom:active {
+    outline: none !important;
+}
+
+.leaflet-control-zoom {
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+    background: #fff !important;
+    color: #222 !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 1.5em;      /* spremeni velikost znaka */
+    width: 40px;           /* spremeni širino gumba */
+    height: 40px;          /* spremeni višino gumba */
+    margin: 2px 0;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.leaflet-control-zoom-in:hover,
+.leaflet-control-zoom-out:hover {
+    background: #e0e0e0 !important;
+}

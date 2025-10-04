@@ -1,6 +1,7 @@
 const socket = io();
 
 // --- Geolokacija: samodejno pošiljanje ---
+/*
 if (navigator.geolocation) {
     navigator.geolocation.watchPosition(
         (position) => {
@@ -19,6 +20,7 @@ if (navigator.geolocation) {
 } else {
     console.error('Geolocation is not supported by this browser.');
 }
+*/
 
 // --- Ročni vnos iz obrazca (če obstaja) ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,7 +48,7 @@ let routingControl;
 
 // --- Navigacijska puščica ---
 const navIcon = L.icon({
-    iconUrl: './images/gesi.png',
+    iconUrl: '/images/gesi.png',
     iconSize: [60, 60],
     iconAnchor: [15, 15],
     popupAnchor: [0, -15]
@@ -258,12 +260,146 @@ L.Control.ClearCustomMarkers = L.Control.extend({
     onRemove: function(map) {}
 });
 
-// Najprej dodaj gumb za dodajanje, nato za brisanje
+// --- Dodaj Leaflet kontrolni meni z gumbom za shranjevanje v CSV ---
+L.Control.SaveCsv = L.Control.extend({
+    onAdd: function(map) {
+        const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control leaflet-control-custom');
+        btn.innerHTML = 'Shrani točke v CSV';
+        btn.style.backgroundColor = '#fff';
+        btn.style.padding = '5px 10px';
+        btn.style.cursor = 'pointer';
+        btn.style.fontWeight = 'bold';
+        btn.style.marginBottom = '5px';
+        btn.disabled = true; // Gumb je privzeto onemogočen
+
+        // Funkcija za osvežitev stanja gumba
+        function refreshButtonState() {
+            btn.disabled = customMarkers.length === 0;
+        }
+
+        // Posodobi stanje gumba ob dodajanju markerja
+        map.on('click', function () {
+            setTimeout(refreshButtonState, 0);
+        });
+
+        // Posodobi stanje gumba ob brisanju markerja (tudi iz popup forme)
+        map.on('layerremove', function () {
+            setTimeout(refreshButtonState, 0);
+        });
+
+        L.DomEvent.on(btn, 'click', function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+
+            const points = customMarkers.map((marker, idx) => {
+                const { lat, lng } = marker.getLatLng();
+                return {
+                    name: `T${idx + 1}`,
+                    latitude: lat,
+                    longitude: lng
+                };
+            });
+            fetch('/save-csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points })
+            })
+            .then(res => {
+                if (res.ok) return res.blob();
+                throw new Error('Napaka pri shranjevanju CSV');
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'T1_T6.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(err => alert(err.message));
+        });
+
+        // Prva nastavitev stanja gumba
+        setTimeout(refreshButtonState, 0);
+
+        return btn;
+    },
+    onRemove: function(map) {}
+});
+
+L.Control.ToggleGeo = L.Control.extend({
+    onAdd: function(map) {
+        const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control leaflet-control-custom');
+        btn.innerHTML = 'Vklopi tvojo lokacijo';
+        btn.style.backgroundColor = '#fff';
+        btn.style.padding = '5px 10px';
+        btn.style.cursor = 'pointer';
+        btn.style.fontWeight = 'bold';
+        btn.style.marginBottom = '5px';
+
+        let geoWatchId = null;
+
+        function startGeolocation() {
+            if (navigator.geolocation && geoWatchId === null) {
+                geoWatchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        socket.emit('send-location', { latitude, longitude });
+                    },
+                    (error) => {
+                        console.error('Error getting geolocation: ', error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+                btn.innerHTML = 'Izklopi tvojo lokacijo';
+            }
+        }
+
+        function stopGeolocation() {
+            if (geoWatchId !== null) {
+                navigator.geolocation.clearWatch(geoWatchId);
+                geoWatchId = null;
+                btn.innerHTML = 'Vklopi tvojo lokacijo';
+            }
+        }
+
+        L.DomEvent.on(btn, 'click', function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            if (geoWatchId === null) {
+                startGeolocation();
+            } else {
+                stopGeolocation();
+            }
+        });
+
+        // Če želiš, da je ob zagonu samodejna lokacija izklopljena, odstrani ali zakomentiraj naslednjo vrstico:
+        // startGeolocation();
+
+        return btn;
+    },
+    onRemove: function(map) {}
+});
+
 L.control.addLocation = function(opts) {
     return new L.Control.AddLocation(opts);
 }
 L.control.clearCustomMarkers = function(opts) {
     return new L.Control.ClearCustomMarkers(opts);
 }
-L.control.addLocation({ position: 'topright' }).addTo(map);
-L.control.clearCustomMarkers({ position: 'topright' }).addTo(map);
+L.control.saveCsv = function(opts) {
+    return new L.Control.SaveCsv(opts);
+}
+L.control.toggleGeo = function(opts) {
+    return new L.Control.ToggleGeo(opts);
+}
+L.control.addLocation({ position: 'topleft' }).addTo(map);
+L.control.clearCustomMarkers({ position: 'topleft' }).addTo(map);
+L.control.saveCsv({ position: 'topleft' }).addTo(map);
+L.control.toggleGeo({ position: 'topleft' }).addTo(map);
